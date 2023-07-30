@@ -28,6 +28,7 @@
 #include "freertos/task.h"
 #include "esp_system.h"
 #include "nvs_flash.h"
+#include "driver/gpio.h"
 
 #ifdef CONFIG_AT_WIFI_COMMAND_SUPPORT
 #include "esp_event.h"
@@ -76,6 +77,75 @@ static void at_netif_init(void)
 #endif
 }
 
+uint8_t at_test_cmd_pintest(uint8_t *cmd_name)
+{
+    uint8_t buffer[64] = {0};
+
+    snprintf((char *)buffer, 64, "this cmd is test cmd: %s\r\n", cmd_name);
+
+    esp_at_port_write_data(buffer, strlen((char *)buffer));
+
+    return ESP_AT_RESULT_CODE_OK;
+}
+
+uint8_t at_query_cmd_pintest(uint8_t *cmd_name)
+{
+    uint8_t buffer[64] = {0};
+
+    snprintf((char *)buffer, 64, "this cmd is query cmd: %s\r\n", cmd_name);
+
+    esp_at_port_write_data(buffer, strlen((char *)buffer));
+
+    return ESP_AT_RESULT_CODE_OK;
+}
+
+uint8_t at_setup_cmd_pintest(uint8_t para_num)
+{
+    int32_t para_int_1 = 0;
+    uint8_t *para_str_2 = NULL;
+    uint8_t num_index = 0;
+    uint8_t buffer[64] = {0};
+
+    if (esp_at_get_para_as_digit(num_index++, &para_int_1) != ESP_AT_PARA_PARSE_RESULT_OK) {
+        return ESP_AT_RESULT_CODE_ERROR;
+    }
+
+    if (esp_at_get_para_as_digit(num_index++, &para_str_2) != ESP_AT_PARA_PARSE_RESULT_OK) {
+        return ESP_AT_RESULT_CODE_ERROR;
+    }
+
+    //snprintf((char *)buffer, 64, "this cmd is setup cmd and cmd num is: %u\r\n", para_num);
+    //esp_at_port_write_data(buffer, strlen((char *)buffer));
+
+    //memset(buffer, 0, 64);
+    //snprintf((char *)buffer, 64, "first parameter is: %d\r\n", para_int_1);
+    //esp_at_port_write_data(buffer, strlen((char *)buffer));
+
+    //memset(buffer, 0, 64);
+    //snprintf((char *)buffer, 64, "second parameter is: %d\r\n", para_str_2);
+    //esp_at_port_write_data(buffer, strlen((char *)buffer));
+
+    esp_rom_gpio_pad_select_gpio(para_int_1);
+    gpio_set_direction(para_int_1, GPIO_MODE_OUTPUT);
+    gpio_set_level(para_int_1, para_str_2);
+
+    return ESP_AT_RESULT_CODE_OK;
+}
+
+uint8_t at_exe_cmd_pintest(uint8_t *cmd_name)
+{
+    uint8_t buffer[64] = {0};
+
+    snprintf((char *)buffer, 64, "this cmd is execute cmd: %s\r\n", cmd_name);
+
+    esp_at_port_write_data(buffer, strlen((char *)buffer));
+
+    return ESP_AT_RESULT_CODE_OK;
+}
+
+static esp_at_cmd_struct at_custom_cmd[] = {
+    {"+PT", at_test_cmd_pintest, at_query_cmd_pintest, at_setup_cmd_pintest, at_exe_cmd_pintest},
+};
 void app_main(void)
 {
     esp_at_main_preprocess();
@@ -269,6 +339,6 @@ void app_main(void)
         printf("regist rainmaker cmd fail\r\n");
     }
 #endif
-
+    esp_at_custom_cmd_array_regist(at_custom_cmd, sizeof(at_custom_cmd) / sizeof(at_custom_cmd[0]));
     at_custom_init();
 }
